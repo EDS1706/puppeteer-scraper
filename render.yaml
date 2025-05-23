@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: puppeteer-scraper
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    plan: starter
+    env: node
+    region: oregon
+    branch: main
+    autoDeploy: true
