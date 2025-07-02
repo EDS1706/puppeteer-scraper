@@ -1,47 +1,43 @@
-const express = require('express');
-const puppeteer = require('puppeteer');
+const express = require("express");
+const puppeteer = require("puppeteer");
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
+app.get("/", async (req, res) => {
+  const url = req.query.url;
+  if (!url) return res.status(400).send("Missing ?url=");
 
-app.post('/', async (req, res) => {
-  const { url } = req.body;
-  if (!url) return res.status(400).json({ error: 'Missing URL' });
-
+  let browser;
   try {
-    const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+    browser = await puppeteer.launch({
+      headless: "new",
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-blink-features=AutomationControlled",
+        "--disable-dev-shm-usage",
+      ],
+    });
+
     const page = await browser.newPage();
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 0 });
 
-    const hostname = new URL(url).hostname;
-    let content = '';
+    await page.setUserAgent(
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
+    );
 
-    if (hostname.includes('israelhayom.co.il')) {
-      content = await page.$$eval('script[type="application/ld+json"]', scripts => {
-        for (const s of scripts) {
-          try {
-            const json = JSON.parse(s.innerText);
-            if (json.articleBody) return json.articleBody;
-          } catch {}
-        }
-        return '';
-      });
-    } else if (hostname.includes('globes.co.il')) {
-      content = await page.$$eval('div.article-body p', els => els.map(el => el.innerText).join('\n'));
-    } else if (hostname.includes('bizportal.co.il')) {
-      content = await page.$$eval('div.article-content p', els => els.map(el => el.innerText).join('\n'));
-    } else if (hostname.includes('maariv.co.il')) {
-      content = await page.$$eval('div.article-content p', els => els.map(el => el.innerText).join('\n'));
-    } else {
-      content = await page.$$eval('p', els => els.map(el => el.innerText).join('\n'));
-    }
+    await page.goto(url, { waitUntil: "networkidle2", timeout: 30000 });
+    await page.waitForTimeout(3000); // תן זמן לדף להיטען
 
-    await browser.close();
-    res.json({ content });
+    const html = await page.content();
+    res.set("Content-Type", "text/html").send(html);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).send("Scraping failed: " + error.message);
+  } finally {
+    if (browser) await browser.close();
   }
 });
 
-app.listen(PORT, () => console.log(`🚀 Server ready at http://localhost:${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Scraper listening on port ${PORT}`);
+});
