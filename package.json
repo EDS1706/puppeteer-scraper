@@ -1,7 +1,6 @@
 {
-  "name": "puppeteer-scraper-server",
+  "name": "funder-scraper",
   "version": "1.0.0",
-  "description": "Puppeteer scraping endpoint for articles",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
